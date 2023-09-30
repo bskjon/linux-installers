@@ -96,7 +96,7 @@ EOF
 
 bashrc_values=(
     "alias PCIIOMMU='IOMMU'"
-
+    "alias firmware-setup='sudo systemctl reboot --firmware-setup'"
     "alias docker-update='docker-compose pull; docker-compose up -d'"
     "alias ffinfo='ffprobe -v quiet -show_streams -print_format json -i'"
     "alias wan-ip='curl \"https://api.ipify.org?format=json\"'"
