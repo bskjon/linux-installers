@@ -89,94 +89,94 @@ install() {
 }
 
 
-conf_nginx="
+conf_nginx='
 
-    #user  nobody;
-    worker_processes  1;
+#user  nobody;
+worker_processes  1;
 
-    error_log  logs/error.log;
-    error_log  logs/error.log  notice;
-    error_log  logs/error.log  info;
+error_log  logs/error.log;
+error_log  logs/error.log  notice;
+error_log  logs/error.log  info;
 
-    events {
-        worker_connections  1024;
-    }
+events {
+    worker_connections  1024;
+}
 
-    http {
-        include       mime.types;
-        default_type  application/octet-stream;
-        #access_log  logs/access.log  main;
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    #access_log  logs/access.log  main;
 
-        sendfile        on;
-        #tcp_nopush     on;
+    sendfile        on;
+    #tcp_nopush     on;
 
-        keepalive_timeout  65;
-        
-        include ssl.conf;
-        include sites/*.conf;
-    }
+    keepalive_timeout  65;
+    
+    include ssl.conf;
+    include sites/*.conf;
+}
 
-"
+'
 
-conf_ssl="
-    lua_shared_dict auto_ssl 1m;
-    lua_shared_dict auto_ssl_settings 64k;
-    resolver 1.1.1.1 ipv6=off;
+conf_ssl='
+lua_shared_dict auto_ssl 1m;
+lua_shared_dict auto_ssl_settings 64k;
+resolver 1.1.1.1 ipv6=off;
 
-    init_by_lua_block {
+init_by_lua_block {
 
-    auto_ssl = (require "resty.auto-ssl").new()
-    auto_ssl:set("dir", "/etc/openresty/auto-ssl")
-    auto_ssl:set("allow_domain", function(domain)
-        return true
-    end)
-    auto_ssl:init()
+  auto_ssl = (require "resty.auto-ssl").new()
+  auto_ssl:set("dir", "/etc/openresty/ssl.d")
+  auto_ssl:set("allow_domain", function(domain)
+    return true
+  end)
+  auto_ssl:init()
 
-    }
+}
 
-    init_worker_by_lua_block {
-    auto_ssl:init_worker()
-    }
+init_worker_by_lua_block {
+  auto_ssl:init_worker()
+}
 
 
-    server {
-    listen 443 ssl;
-    ssl_certificate_by_lua_block {
-        auto_ssl:ssl_certificate()
-    }
-        ssl_certificate     /etc/ssl/auto/resty-auto-ssl-fallback.crt;
-        ssl_certificate_key /etc/ssl/auto/resty-auto-ssl-fallback.key;
-    }
-
-    server {
-    listen 80;
-    location /.well-known/acme-challenge/ {
-        content_by_lua_block {
-        auto_ssl:challenge_server()
-        }
-    }
-    }
-
-    server {
-    listen 127.0.0.1:8999;
-    client_body_buffer_size 128k;
-    client_max_body_size 128k;
-
-    location / {
-        content_by_lua_block {
-        auto_ssl:hook_server()
-        }
-    }
-    }
-"
-
-conf_certBlock="
-    ssl_certificate_by_lua_block {
-        auto_ssl:ssl_certificate()
-    }
+server {
+  listen 443 ssl;
+  ssl_certificate_by_lua_block {
+    auto_ssl:ssl_certificate()
+  }
     ssl_certificate     /etc/ssl/auto/resty-auto-ssl-fallback.crt;
     ssl_certificate_key /etc/ssl/auto/resty-auto-ssl-fallback.key;
-"
+}
+
+server {
+  listen 80;
+  location /.well-known/acme-challenge/ {
+    content_by_lua_block {
+      auto_ssl:challenge_server()
+    }
+  }
+}
+
+server {
+  listen 127.0.0.1:8999;
+  client_body_buffer_size 128k;
+  client_max_body_size 128k;
+
+  location / {
+    content_by_lua_block {
+      auto_ssl:hook_server()
+    }
+  }
+}
+'
+
+conf_certBlock='
+ssl_certificate_by_lua_block {
+    auto_ssl:ssl_certificate()
+}
+ssl_certificate     /etc/ssl/auto/resty-auto-ssl-fallback.crt;
+ssl_certificate_key /etc/ssl/auto/resty-auto-ssl-fallback.key;
+'
 
 
 postInstall() {
@@ -205,6 +205,10 @@ postInstall() {
     echo "$conf_certBlock" > /usr/local/openresty/nginx/conf/cert-block.conf
     run /usr/local/openresty/nginx/sbin/nginx -t
     wvalidate "Nginx + SSL Config"
+
+    mkdir -p /usr/local/openresty/nginx/conf/ssl.d
+    run sudo chmod -R 0765 /usr/local/openresty/nginx/conf/ssl.d/
+
 
 
     wstatus "Service" "Enabling OpenResty"
