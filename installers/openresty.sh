@@ -69,12 +69,31 @@ updateAndInstallDependencies() {
 
 
 addRepository() {
+    if [ -f /etc/os-release ]; then
+        os=$(grep -oP '^ID=\K\w+' /etc/os-release)
+    else
+        echo "Unable to determine the operating system."
+        exit 1
+    fi
+    
     local repo_file="/etc/apt/sources.list.d/openresty.list"
     wstatus "Repository" "Adding OpenResty repository"
+    # Import GPG key
     wget -O - https://openresty.org/package/pubkey.gpg | sudo apt-key add -
-
-    echo "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" \
-        | sudo tee -a "$repo_file" > /dev/null 2>&1
+    
+    # Add official APT repository
+    if [ "$os" == "ubuntu" ]; then
+        # For Ubuntu
+        echo "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" \
+            | sudo tee -a "$repo_file" > /dev/null 2>&1
+    elif [ "$os" == "debian" ]; then
+        # For Debian
+        codename=$(grep -Po 'VERSION="[0-9]+ \(\K[^)]+' /etc/os-release)
+        echo "deb http://openresty.org/package/debian $codename openresty" | sudo tee -a "$repo_file" > /dev/null 2>&1
+    else
+        echo "Unsupported operating system: $os"
+        exit 1
+    fi
     wvalidate "OpenResty repository"
 }
 
