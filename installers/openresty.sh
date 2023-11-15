@@ -95,6 +95,8 @@ addRepository() {
         exit 1
     fi
     wvalidate "OpenResty repository"
+    wstatus "Maintenance" "Updating apt"
+    run apt -y update
 }
 
 install() {
